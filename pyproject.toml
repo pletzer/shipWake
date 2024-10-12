@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shipwake"
+description = "Computating the stationary field wake from a moving ship"
+authors = [
+    { name = "Alexander Pletzer", email = "alexander@gokliya.net" }
+]
+dependencies = [
+    "pyyaml",
+    "defopt",
+    "numpy",
+    "scipy",
+    "vtk",
+    ]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pdbpp",
+    "pyinstrument"
+]
+
+[project.scripts]
+shipwake = "cli:main"
+
+[tool.setuptools_scm]
+# needed even if empty to enable setuptools_scm
+
+[tool.ruff]
+select = ["E", "F"]
+ignore = ["E203"]
+extend-exclude = [".ipynb_checkpoints"]
