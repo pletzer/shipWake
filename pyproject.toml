@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-shipwake = "cli:main"
+swk = "shipWake.cli:main"
 
 [tool.setuptools_scm]
 # needed even if empty to enable setuptools_scm

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+import argparse
 import numpy as np
 from scipy.integrate import quad_vec
 import vtk
@@ -117,17 +116,40 @@ class ShipWake(object):
         iren.Initialize()
         renWin.Render()
         iren.Start()
-       
-            
+
+
+def main():
+    """
+    Compute the wake field
     
+    :param float froude: Froude number
+    :param float elx: length of domain along the ship's path
+    :param float elShip: length of the ship
+    :param int nx: number of x cells
+    :param int ny: number of y cells
+    """
+    parser = argparse.ArgumentParser(
+                    description='Compute the wake behind a ship')
+
+    parser.add_argument('-f', '--froude', type=float, default=0.5, help='Froude number')
+    parser.add_argument('-x', '--xlen', type=float, default=140.0, help='Length of domain along path')
+    parser.add_argument('-s', '--shiplen', type=float, default=4.0, help='Size of ship')
+    parser.add_argument('-n', '--nx', type=int, default=128, help='Number of cells in x direction')
+    parser.add_argument('-m', '--my', type=int, default=64, help='Number of cells in y direction')
+
+    args = parser.parse_args()
+
+    print(f'Fr={args.froude} ship len: {args.shiplen}')
+    
+    sw = ShipWake(elx=args.xlen, nx=args.nx, ny=args.my)
+    
+    buffer = 0.1 * args.shiplen
+    x = np.linspace(-args.xlen + buffer, buffer, args.nx + 1)
+    y = np.linspace(0.0, args.xlen/2.0, args.my + 1)
+    xx, yy = np.meshgrid(x, y)
+    zz = sw.compute(xx, yy, froude=args.froude, elShip=args.shiplen)
+    
+    sw.show(xx, yy, np.ascontiguousarray(zz.real))
+
 if __name__ == '__main__':
-        sw = ShipWake(nx=32, ny=16)
-        x, y = -20., 1.2
-        zeta = sw.compute(x=-20., y=1.2, froude=0.5)
-        print(f'(x,y)=({x:.2f}, {y:.2f} zeta = {zeta}')
-        
-        x = np.linspace(-140, 10., 21)
-        y = np.linspace(0., 50., 11)
-        xx, yy = np.meshgrid(x, y)
-        zz = sw.compute(x=xx, y=yy, froude=0.5)
-        print(f'zz.real min/max = {zz.real.min()}/{zz.real.max()}')
+    main()
