@@ -10,7 +10,6 @@ authors = [
 ]
 dependencies = [
     "pyyaml",
-    "defopt",
     "numpy",
     "scipy",
     "vtk",
@@ -25,7 +24,7 @@ dev = [
 ]
 
 [project.scripts]
-swk = "shipWake.cli:main"
+shipwake = "shipWake.cli:main"
 
 [tool.setuptools_scm]
 # needed even if empty to enable setuptools_scm

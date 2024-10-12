@@ -47,8 +47,7 @@ class ShipWake(object):
 
         ny1, nx1 = xx.shape
         numPoints = nx1 * ny1
-        fMin = zz.min()
-        fMax = zz.max()
+        fMax = max(abs(zz.max()), abs(zz.min()))
 
         # create the pipeline objects
         data = vtk.vtkDoubleArray()
@@ -70,7 +69,7 @@ class ShipWake(object):
             b = np.sin(5*x)**2
             a = 1.0 # opacity
             lut.SetTableValue(i, r, g, b, a)
-        lut.SetTableRange(fMin, fMax)
+        lut.SetTableRange(-fMax, fMax)
         cbar.SetLookupTable(lut)
         dataMapper.SetUseLookupTableScalarRange(1)
 
