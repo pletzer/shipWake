@@ -23,6 +23,7 @@ class ShipWake(object):
         
         u =  np.sqrt(self.g * elShip) * froude
         kg = self.g/u**2
+        print(f'u = {u:.2f} k_g = {kg:.2g} lambda_g = {2*np.pi/kg:.2f}')
         fourPiSquare = 4 * np.pi**2
         
         def integrand(k):
@@ -40,14 +41,14 @@ class ShipWake(object):
         def imagIntegrand(k):
             return integrand(k).imag
         
-        return quad_vec(realIntegrand, kg + eps, np.inf)[0] + 1j*quad_vec(imagIntegrand, kg + eps, np.inf)[0]
+        return quad_vec(realIntegrand, kg + eps, np.inf)[0]
     
     
     def show(self, xx, yy, zz):
 
         ny1, nx1 = xx.shape
         numPoints = nx1 * ny1
-        fMax = max(abs(zz.max()), abs(zz.min()))
+        fMin, fMax = zz.min(), zz.max()
 
         # create the pipeline objects
         data = vtk.vtkDoubleArray()
@@ -69,7 +70,7 @@ class ShipWake(object):
             b = np.sin(5*x)**2
             a = 1.0 # opacity
             lut.SetTableValue(i, r, g, b, a)
-        lut.SetTableRange(-fMax, fMax)
+        lut.SetTableRange(fMin, fMax)
         cbar.SetLookupTable(lut)
         dataMapper.SetUseLookupTableScalarRange(1)
 
@@ -146,9 +147,11 @@ def main():
     x = np.linspace(-args.xlen + buffer, buffer, args.nx + 1)
     y = np.linspace(0.0, args.xlen/2.0, args.my + 1)
     xx, yy = np.meshgrid(x, y)
-    zz = sw.compute(xx, yy, froude=args.froude, elShip=args.shiplen)
+    zzr = sw.compute(xx, yy, froude=args.froude, elShip=args.shiplen)
     
-    sw.show(xx, yy, np.ascontiguousarray(zz.real))
+    print(f'mean, std height: {zzr.mean()}, {zzr.std()}')
+
+    sw.show(xx, yy, zzr)
 
 if __name__ == '__main__':
     main()
