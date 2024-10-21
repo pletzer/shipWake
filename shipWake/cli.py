@@ -24,15 +24,16 @@ class ShipWake(object):
         u =  np.sqrt(self.g * elShip) * froude
         kg = self.g/u**2
         print(f'u = {u:.2f} k_g = {kg:.2g} lambda_g = {2*np.pi/kg:.2f}')
-        fourPiSquare = 4 * np.pi**2
+        eightPiSquare = 8 * np.pi**2
         
         def integrand(k):
             d = np.sqrt(1.0 - kg/k)
             kx = np.sqrt(kg * k)
             ky = np.sqrt(k**2 - kx**2)
-            return ( \
-                np.exp( 1j * (kx*x + ky*y) ) \
-                * (-1j * kx) * np.exp(-k**2 * elShip**2 / fourPiSquare)
+            coeff = 1j * np.sqrt(self.g) * np.sqrt(k) * elShip**2 / (u * eightPiSquare)
+            return coeff \
+                * np.exp( 1j * (kx*x + ky*y) ) \
+                * np.exp(-k**2 * elShip**2 / eightPiSquare \
                     ) / d
             
         def realIntegrand(k):
@@ -49,6 +50,8 @@ class ShipWake(object):
         ny1, nx1 = xx.shape
         numPoints = nx1 * ny1
         fMin, fMax = zz.min(), zz.max()
+        fMax = max(abs(fMax), abs(fMin))
+        fMin = -fMax
 
         # create the pipeline objects
         data = vtk.vtkDoubleArray()
