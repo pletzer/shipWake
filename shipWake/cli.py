@@ -118,9 +118,7 @@ class ShipWake(object):
         return pipeline
 
     
-    def show(self, xx, yy, zz):
-        
-        pipeline = self.createVtkPipeline(xx, yy, zz)
+    def show(self, pipeline):
 
         # show
         ren = vtk.vtkRenderer()
@@ -135,7 +133,32 @@ class ShipWake(object):
         renWin.SetSize(900, 600)
         iren.Initialize()
         renWin.Render()
-        iren.Start()
+        
+        pipeline['ren'] = ren
+        pipeline['renWin'] = renWin
+        pipeline['iren'] = iren
+        
+        return pipeline
+        
+    def savePNG(self, pipeline, filename):
+        
+        writer = vtk.vtkPNGWriter()
+        writer.SetFileName(filename)
+
+        imgFilter = vtk.vtkWindowToImageFilter()
+        imgFilter.SetInput(pipeline['renWin'])
+        imgFilter.SetInputBufferTypeToRGB()
+        imgFilter.Update()
+
+        # writer.SetFileName(filename)
+        writer.SetInputConnection(imgFilter.GetOutputPort())
+        writer.Write()
+        
+        pipeline['writer'] = writer
+        pipeline['imgFilter'] = imgFilter
+        
+        return pipeline
+        
 
 
 def main():
@@ -156,6 +179,8 @@ def main():
     parser.add_argument('-s', '--shiplen', type=float, default=4.0, help='Size of ship')
     parser.add_argument('-n', '--nx', type=int, default=128, help='Number of cells in x direction')
     parser.add_argument('-m', '--my', type=int, default=64, help='Number of cells in y direction')
+    parser.add_argument('-show', '--show', action='store_true', default=False, help='Show the wake field')
+    parser.add_argument('-save', '--save', type=str, default='', help='Save the wake field in file')
 
     args = parser.parse_args()
 
@@ -171,7 +196,16 @@ def main():
     
     print(f'mean, std height: {zzr.mean()}, {zzr.std()}')
 
-    sw.show(xx, yy, zzr)
+    pipeline = sw.createVtkPipeline(xx, yy, zzr)
+    if args.show:
+        pipeline = sw.show(pipeline)
+        pipeline['iren'].Start()
+
+        
+    if args.save:
+        # need to add the renders to the pipeline
+        pipeline = sw.show(pipeline)
+        pipeline = sw.savePNG(pipeline, args.save)
 
 if __name__ == '__main__':
     main()
