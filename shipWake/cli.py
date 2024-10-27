@@ -44,9 +44,8 @@ class ShipWake(object):
         
         return quad_vec(realIntegrand, kg + eps, np.inf)[0]
     
-    
-    def show(self, xx, yy, zz):
-
+    def createVtkPipeline(self, xx, yy, zz):
+        
         ny1, nx1 = xx.shape
         numPoints = nx1 * ny1
         fMin, fMax = zz.min(), zz.max()
@@ -62,7 +61,7 @@ class ShipWake(object):
         dataActor = vtk.vtkActor()
         lut = vtk.vtkLookupTable()
         cbar = vtk.vtkScalarBarActor()
-
+        
         # build the lookup table
         ncolors = 64
         lut.SetNumberOfColors(ncolors)
@@ -95,7 +94,6 @@ class ShipWake(object):
         save = 1
         data.SetVoidArray(zz, numPoints, save)
 
-
         # connect
         pts.SetNumberOfPoints(numPoints)
         pts.SetData(coords)
@@ -105,6 +103,25 @@ class ShipWake(object):
         dataActor.SetMapper(dataMapper)
         dataMapper.SetLookupTable(lut)
 
+        pipeline = {
+            'data': data,
+            'coords': coords,
+            'pts': pts,
+            'grid': grid,
+            'dataMapper': dataMapper,
+            'dataActor': dataActor,
+            'lut': lut,
+            'cbar': cbar,
+            'xyz': xyz,
+        }
+        
+        return pipeline
+
+    
+    def show(self, xx, yy, zz):
+        
+        pipeline = self.createVtkPipeline(xx, yy, zz)
+
         # show
         ren = vtk.vtkRenderer()
         renWin = vtk.vtkRenderWindow()
@@ -112,8 +129,8 @@ class ShipWake(object):
         iren = vtk.vtkRenderWindowInteractor()
         iren.SetRenderWindow(renWin)
         # add the actors to the renderer, set the background and size
-        ren.AddActor(dataActor)
-        ren.AddActor(cbar)
+        ren.AddActor(pipeline['dataActor'])
+        ren.AddActor(pipeline['cbar'])
         ren.SetBackground(0.5, 0.5, 0.5)
         renWin.SetSize(900, 600)
         iren.Initialize()
