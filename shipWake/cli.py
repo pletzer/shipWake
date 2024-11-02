@@ -117,10 +117,10 @@ class ShipWake(object):
         ncolors = 64
         lut.SetNumberOfColors(ncolors)
         for i in range(ncolors):
-            x = 0.5*i*np.pi/(ncolors - 1.)
-            r = np.sin(3*x)**2
-            g = np.sin(1*x)**2
-            b = np.sin(5*x)**2
+            x = i/(ncolors - 1.)
+            r = x**2
+            g = np.sin(0.5*np.pi*x)**2
+            b = min(1, 2*x)
             a = 1.0 # opacity
             lut.SetTableValue(i, r, g, b, a)
         lut.SetTableRange(fMin, fMax)
@@ -229,6 +229,7 @@ def main():
     parser.add_argument('-x', '--xlen', type=float, default=140.0, help='Length of domain along path')
     parser.add_argument('-l', '--shiplength', type=float, default=4.0, help='Length of ship')
     parser.add_argument('-w', '--shipwidth', type=float, default=4.0, help='Width of ship')
+    parser.add_argument('-d', '--shipdepth', type=float, default=1.0, help='Depth of ship hull')
     parser.add_argument('-n', '--nx', type=int, default=128, help='Number of cells in x direction')
     parser.add_argument('-m', '--my', type=int, default=64, help='Number of cells in y direction')
     parser.add_argument('-show', '--show', action='store_true', default=False, help='Show the wake field')
@@ -248,11 +249,14 @@ def main():
     # ship disturbance
     elShipL = args.shiplength
     elShipW = args.shipwidth
+    # mid location 
     x0, y0 = 0.0, 0.0
-    xs = np.linspace(x0 - 10*elShipL, x0 + 10*elShipL, 64)
-    ys = np.linspace(y0 - 10*elShipW, y0 + 10*elShipW, 64)
+    # fixed resolution for the time being
+    xs = np.linspace(x0 - 10*elShipL, x0 + 10*elShipL, 128)
+    ys = np.linspace(y0 - 10*elShipW, y0 + 10*elShipW, 128)
     xxs, yys = np.meshgrid(xs, ys)
     mask = (xxs/elShipL)**2 + (yys/elShipW)**2 > 1
+    # depth is 1
     depths = mask * 1
     
     zzr = sw.compute(xx, yy, xs, ys, depths, froude=args.froude, )
