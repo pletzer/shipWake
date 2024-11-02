@@ -40,10 +40,10 @@ class FourierTransform(object):
         
         # no ship hull perturbations for high k wavenumbers
         depthsFFT_ext = np.zeros((depthsFFT.shape[0] + 4, depthsFFT.shape[0] + 4), np.complex128)
-        depthsFFT_ext[2:-2, 2:-2] = depthsFFT    
+        depthsFFT_ext[2:-2, 2:-2] = -depthsFFT    
             
         # build the interpolator
-        self.interp = RegularGridInterpolator((kx_ext, ky_ext), depthsFFT_ext) #, method='cubic')
+        self.interp = RegularGridInterpolator((kx_ext, ky_ext), depthsFFT_ext, method='linear')
     
     def __call__(self, k):
         return self.interp(k)
@@ -255,9 +255,8 @@ def main():
     xs = np.linspace(x0 - 10*elShipL, x0 + 10*elShipL, 128)
     ys = np.linspace(y0 - 10*elShipW, y0 + 10*elShipW, 128)
     xxs, yys = np.meshgrid(xs, ys)
-    mask = (xxs/elShipL)**2 + (yys/elShipW)**2 > 1
-    # depth is 1
-    depths = mask * 1
+    valid_region = (xxs/elShipL)**2 + (yys/elShipW)**2 < 1.0
+    depths = valid_region * args.shipdepth
     
     zzr = sw.compute(xx, yy, xs, ys, depths, froude=args.froude, )
     
