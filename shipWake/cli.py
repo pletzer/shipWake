@@ -92,6 +92,7 @@ class ShipWake(object):
         def realIntegrand(k):
             return integrand(k).real
         
+        # limit the max integration bound to be 1000*kg
         return quad_vec(realIntegrand, kg + eps, 1000*kg)[0]
     
     def createVtkPipeline(self, xx, yy, zz):
@@ -226,7 +227,8 @@ def main():
 
     parser.add_argument('-f', '--froude', type=float, default=0.5, help='Froude number')
     parser.add_argument('-x', '--xlen', type=float, default=140.0, help='Length of domain along path')
-    parser.add_argument('-s', '--shiplen', type=float, default=4.0, help='Size of ship')
+    parser.add_argument('-l', '--shiplength', type=float, default=4.0, help='Length of ship')
+    parser.add_argument('-w', '--shipwidth', type=float, default=4.0, help='Width of ship')
     parser.add_argument('-n', '--nx', type=int, default=128, help='Number of cells in x direction')
     parser.add_argument('-m', '--my', type=int, default=64, help='Number of cells in y direction')
     parser.add_argument('-show', '--show', action='store_true', default=False, help='Show the wake field')
@@ -234,21 +236,23 @@ def main():
 
     args = parser.parse_args()
 
-    print(f'Fr={args.froude} ship len: {args.shiplen}')
+    print(f'Fr={args.froude} ship len: {args.shiplength}')
     
     sw = ShipWake(elx=args.xlen, nx=args.nx, ny=args.my)
     
-    buffer = 0.1 * args.shiplen
+    buffer = 0.1 * args.shiplength
     x = np.linspace(-args.xlen + buffer, buffer, args.nx + 1)
     y = np.linspace(0.0, args.xlen/2.0, args.my + 1)
     xx, yy = np.meshgrid(x, y)
     
-    elShip=args.shiplen
+    # ship disturbance
+    elShipL = args.shiplength
+    elShipW = args.shipwidth
     x0, y0 = 0.0, 0.0
-    xs = np.linspace(x0 - 10*elShip, x0 + 10*elShip, 64)
-    ys = np.linspace(y0 - 10*elShip, y0 + 10*elShip, 64)
+    xs = np.linspace(x0 - 10*elShipL, x0 + 10*elShipL, 64)
+    ys = np.linspace(y0 - 10*elShipW, y0 + 10*elShipW, 64)
     xxs, yys = np.meshgrid(xs, ys)
-    mask = (xxs**2 + yys**2 > elShip**2)
+    mask = (xxs/elShipL)**2 + (yys/elShipW)**2 > 1
     depths = mask * 1
     
     zzr = sw.compute(xx, yy, xs, ys, depths, froude=args.froude, )
