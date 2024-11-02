@@ -1,7 +1,41 @@
 import argparse
 import numpy as np
 from scipy.integrate import quad_vec
+from scipy.interpolate import RegularGridInterpolator
 import vtk
+
+class FourierTransform(object):
+    
+    def __init__(self, xy, depths):
+        
+        # number points in x and y
+        ns = len(xy[0]), len(xy[1])
+        
+        # domain length in x and y
+        els = xy[0][-1] - xy[0][0], xy[1][-1] - xy[1][0]
+        
+        # lower x and y corners
+        x0s = xy[0][0], xy[1][0]
+        
+        # intervals in x and y
+        dxs = els[0]/ns[0], els[1]/ns[1]
+        
+        # Fourier grid
+        ks = np.fft.fftshift(np.fft.fftfreq(ns[0])) * 2 * np.pi / dxs[0], \
+             np.fft.fftshift(np.fft.fftfreq(ns[1])) * 2 * np.pi / dxs[1]
+             
+        kkx, kky = np.meshgrid(ks[0], ks[1])
+                
+        # Fourier transform, takes into account translation and rescaling. Also 
+        # reorder the FFT terms to have continuously growing k values
+        depthsFFT = np.exp(-1j*(kkx*x0s[0] + kky*x0s[1])) * dxs[0] * dxs[1] * \
+            np.fft.fftshift(np.fft.fft2(depths))
+            
+        # build the interpolator
+        self.interp = RegularGridInterpolator(ks, depthsFFT) #, method='cubic')
+    
+    def __call__(self, k):
+        return self.interp(k)
 
 class ShipWake(object):
     
@@ -19,30 +53,35 @@ class ShipWake(object):
         self.xx, self.yy = np.meshgrid(self.x, self.y)
         
     
-    def compute(self, x, y, froude=0.5, elShip=4.0, eps=1.e-10) -> None:
+    def compute(self, x, y, xs, ys, depths, froude=0.5, eps=1.e-10) -> None:
+        
+        shipDepthFFT = FourierTransform((xs, ys), depths)
+        
+        # collect all the x indices where the depth of the hull is > 0
+        # to extract the ship length
+        i_indices = [i[0] for i in np.argwhere(depths > 0)]
+        xd = xs[i_indices]
+        xmin, xmax = np.min(xd), np.max(xd)
+        elShip = xmax - xmin
         
         u =  np.sqrt(self.g * elShip) * froude
         kg = self.g/u**2
+        
         print(f'u = {u:.2f} k_g = {kg:.2g} lambda_g = {2*np.pi/kg:.2f}')
-        eightPiSquare = 8 * np.pi**2
         
         def integrand(k):
-            d = np.sqrt(1.0 - kg/k)
             kx = np.sqrt(kg * k)
             ky = np.sqrt(k**2 - kx**2)
-            coeff = 1j * np.sqrt(self.g) * np.sqrt(k) * elShip**2 / (u * eightPiSquare)
+            kvec = np.array((kx, ky))
+            coeff = 1j * kx  / (4 * np.pi)
             return coeff \
                 * np.exp( 1j * (kx*x + ky*y) ) \
-                * np.exp(-k**2 * elShip**2 / eightPiSquare \
-                    ) / d
+                * shipDepthFFT(kvec) / np.sqrt(1.0 - kg/k)
             
         def realIntegrand(k):
             return integrand(k).real
         
-        def imagIntegrand(k):
-            return integrand(k).imag
-        
-        return quad_vec(realIntegrand, kg + eps, np.inf)[0]
+        return quad_vec(realIntegrand, kg + eps, 2)[0] # np.inf)[0]
     
     def createVtkPipeline(self, xx, yy, zz):
         
@@ -192,7 +231,16 @@ def main():
     x = np.linspace(-args.xlen + buffer, buffer, args.nx + 1)
     y = np.linspace(0.0, args.xlen/2.0, args.my + 1)
     xx, yy = np.meshgrid(x, y)
-    zzr = sw.compute(xx, yy, froude=args.froude, elShip=args.shiplen)
+    
+    elShip=args.shiplen
+    x0, y0 = 0.0, 0.0
+    xs = np.linspace(x0 - 10*elShip, x0 + 10*elShip, 64)
+    ys = np.linspace(y0 - 10*elShip, y0 + 10*elShip, 64)
+    xxs, yys = np.meshgrid(xs, ys)
+    mask = (xxs**2 + yys**2 > elShip**2)
+    depths = mask * 1
+    
+    zzr = sw.compute(xx, yy, xs, ys, depths, froude=args.froude, )
     
     print(f'mean, std height: {zzr.mean()}, {zzr.std()}')
 
