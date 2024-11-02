@@ -31,8 +31,19 @@ class FourierTransform(object):
         depthsFFT = np.exp(-1j*(kkx*x0s[0] + kky*x0s[1])) * dxs[0] * dxs[1] * \
             np.fft.fftshift(np.fft.fft2(depths))
             
+        # extend Fourier domain to infinity
+        kx_ext, ky_ext = np.empty((ns[0] + 4,), float), np.empty((ns[1] + 4,), float)
+        kx_ext[2:-2] = ks[0]
+        ky_ext[2:-2] = ks[1]
+        kx_ext[0], kx_ext[1], kx_ext[-2], kx_ext[-1] = -1.e10, 2*ks[0][0], 2*ks[0][-1], +1.e10
+        ky_ext[0], ky_ext[1], ky_ext[-2], ky_ext[-1] = -1.e10, 2*ks[1][0], 2*ks[1][-1], +1.e10
+        
+        # no ship hull perturbations for high k wavenumbers
+        depthsFFT_ext = np.zeros((depthsFFT.shape[0] + 4, depthsFFT.shape[0] + 4), np.complex128)
+        depthsFFT_ext[2:-2, 2:-2] = depthsFFT    
+            
         # build the interpolator
-        self.interp = RegularGridInterpolator(ks, depthsFFT) #, method='cubic')
+        self.interp = RegularGridInterpolator((kx_ext, ky_ext), depthsFFT_ext) #, method='cubic')
     
     def __call__(self, k):
         return self.interp(k)
@@ -81,7 +92,7 @@ class ShipWake(object):
         def realIntegrand(k):
             return integrand(k).real
         
-        return quad_vec(realIntegrand, kg + eps, 2)[0] # np.inf)[0]
+        return quad_vec(realIntegrand, kg + eps, 1000*kg)[0]
     
     def createVtkPipeline(self, xx, yy, zz):
         
